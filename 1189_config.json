@@ -1,0 +1,28 @@
+{
+    "rootTableName": "/gtsam_meme",
+    "ntServerURI": "10.11.89.2",
+    "cameras": [
+        {
+            "subtableName": "FRONT_LEFT",
+            "pixelNoise": 5
+        },
+        {
+            "subtableName": "FRONT_RIGHT",
+            "pixelNoise": 5
+        },
+        {
+            "subtableName": "BACK_LEFT",
+            "pixelNoise": 5
+        }
+    ],
+    "rotNoise": [
+        0.0087263889,
+        0.0087263889,
+        0.0087263889
+    ],
+    "transNoise": [
+        0.004,
+        0.004,
+        0.004
+    ]
+}

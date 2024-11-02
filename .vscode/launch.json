@@ -33,7 +33,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/bin/gtsam-node",
-            "args": [],
+            "args": ["${workspaceFolder}/1189_sim_config.json"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

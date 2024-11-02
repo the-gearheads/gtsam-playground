@@ -55,6 +55,7 @@ Localizer::Localizer() {
 void Localizer::Reset(Pose3 wTr, SharedNoiseModel noise, uint64_t timeUs) {
   // Anchor graph using initial pose. I subtract one to make sure that we dont
   // add this time to the estimate map twice
+  fmt::println("Localizer::Reset timeUs: {}", timeUs);
   timeUs -= 1;
 
   currStateIdx = X(timeUs);
@@ -76,6 +77,7 @@ void Localizer::Reset(Pose3 wTr, SharedNoiseModel noise, uint64_t timeUs) {
 }
 
 void Localizer::AddOdometry(OdometryObservation odom) {
+  fmt::println("Localizer::AddOdometry");
   const Pose3 &poseDelta = odom.poseDelta;
   const SharedNoiseModel &odometryNoise = odom.odometryNoise;
   uint64_t timeUs = odom.timeUs;
@@ -100,6 +102,7 @@ void Localizer::AddOdometry(OdometryObservation odom) {
 Key Localizer::InsertIntoSmoother(Key lower, Key upper, Key newKey,
                                   double newTime,
                                   SharedNoiseModel odometryNoise) {
+  fmt::println("Localizer::InsertIntoSmoother lower: {} upper: {} newkey: {} newtime: {}", lower, upper, newKey, newTime);
   /**
    * Goal: find the FactorIndex that connects our lower/upper key, and replace
    * it with 2 new factors and an intermediatestate
@@ -381,9 +384,11 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
 
 void Localizer::AddTagObservation(CameraVisionObservation obs) {
   const auto &isamTimestamps = smootherISAM2.timestamps();
-  if (obs.timeUs < isamTimestamps.begin()->second) {
+  if (isamTimestamps.empty() || obs.timeUs < isamTimestamps.begin()->second) {
     std::cerr << "Timestamp is before even isam history - skipping" << std::endl;
     return;
+  } else {
+    std::cerr << "Timestamp is after isam history" << std::endl;
   }
 
   int tagID = obs.tagID;
@@ -420,9 +425,9 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
 }
 
 void Localizer::Optimize() {
-  // fmt::println("Adding {} factors!", graph.size());
+  fmt::println("Adding {} factors!", graph.size());
   // graph.print("New factors: ");
-  // currentEstimate.print("New estimates: ");
+  currentEstimate.print("New estimates: ");
 
   smootherISAM2.update(graph, currentEstimate, newTimestamps, factorsToRemove);
 
