@@ -99,6 +99,7 @@ void Localizer::AddOdometry(OdometryObservation odom) {
   currStateIdx = newStateIdx;
 }
 
+// currently unused
 Key Localizer::InsertIntoSmoother(Key lower, Key upper, Key newKey,
                                   double newTime,
                                   SharedNoiseModel odometryNoise) {
@@ -384,12 +385,18 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
 
 void Localizer::AddTagObservation(CameraVisionObservation obs) {
   const auto &isamTimestamps = smootherISAM2.timestamps();
-  if (isamTimestamps.empty() || obs.timeUs < isamTimestamps.begin()->second) {
+
+  if (isamTimestamps.empty()) {
+    std::cerr << "No isam history yet - skipping" << std::endl;
+    return;
+  }
+
+  if (obs.timeUs < isamTimestamps.begin()->second) {
     std::cerr << "Timestamp is before even isam history - skipping" << std::endl;
     return;
-  } else {
-    std::cerr << "Timestamp is after isam history" << std::endl;
   }
+
+  std::cerr << "Wow we're actually accepting this one" << std::endl;
 
   int tagID = obs.tagID;
   const Cal3_S2_ &cameraCal = obs.cameraCal;
@@ -427,7 +434,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
 void Localizer::Optimize() {
   fmt::println("Adding {} factors!", graph.size());
   // graph.print("New factors: ");
-  currentEstimate.print("New estimates: ");
+  // currentEstimate.print("New estimates: ");
 
   smootherISAM2.update(graph, currentEstimate, newTimestamps, factorsToRemove);
 
