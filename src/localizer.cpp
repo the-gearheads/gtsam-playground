@@ -55,7 +55,7 @@ Localizer::Localizer() {
 void Localizer::Reset(Pose3 wTr, SharedNoiseModel noise, uint64_t timeUs) {
   // Anchor graph using initial pose. I subtract one to make sure that we dont
   // add this time to the estimate map twice
-  fmt::println("Localizer::Reset timeUs: {}", timeUs);
+  // fmt::println("Localizer::Reset timeUs: {}", timeUs);
   timeUs -= 1;
 
   currStateIdx = X(timeUs);
@@ -77,7 +77,7 @@ void Localizer::Reset(Pose3 wTr, SharedNoiseModel noise, uint64_t timeUs) {
 }
 
 void Localizer::AddOdometry(OdometryObservation odom) {
-  fmt::println("Localizer::AddOdometry");
+  // fmt::println("Localizer::AddOdometry");
   const Pose3 &poseDelta = odom.poseDelta;
   const SharedNoiseModel &odometryNoise = odom.odometryNoise;
   uint64_t timeUs = odom.timeUs;
@@ -210,9 +210,13 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
 
   KeyTimeMap::iterator notAddedAfter = newTimestamps.upper_bound(newKey);
 
+  if(newTimestamps.empty()) {
+    throw std::runtime_error("Timestamp is past ISAM history, but no new timestamps??");
+  }
+
   if (notAddedAfter == newTimestamps.end()) {
     throw std::runtime_error(
-        "Timestamp past ISAM history, but not in yet-to-be-added");
+        "Timestamp past ISAM history, but not in yet-to-be-added, our timestamp is " + std::to_string(time) + " and the last timestamp in newTimestamps is " + std::to_string(newTimestamps.rbegin()->second));
   }
 
   if (notAddedAfter == newTimestamps.begin() &&
@@ -396,7 +400,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
     return;
   }
 
-  std::cerr << "Wow we're actually accepting this one" << std::endl;
+  // std::cerr << "Wow we're actually accepting this one" << std::endl;
 
   int tagID = obs.tagID;
   const Cal3_S2_ &cameraCal = obs.cameraCal;
@@ -432,7 +436,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
 }
 
 void Localizer::Optimize() {
-  fmt::println("Adding {} factors!", graph.size());
+  // fmt::println("Adding {} factors!", graph.size());
   // graph.print("New factors: ");
   // currentEstimate.print("New estimates: ");
 

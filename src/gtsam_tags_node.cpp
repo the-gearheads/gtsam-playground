@@ -25,6 +25,7 @@
 #include <iostream>
 #include <memory>
 #include <thread>
+#include <deque>
 
 #include <frc/geometry/Rotation3d.h>
 #include <frc/geometry/struct/Pose3dStruct.h>
@@ -56,6 +57,7 @@ private:
   DataPublisher dataPublisher;
   ConfigListener configListener;
   std::vector<CameraListener> cameraListeners;
+  std::deque<CameraVisionObservation> tooNewCameraObservations;
 
   bool gotInitialGuess = false;
 
@@ -69,10 +71,14 @@ public:
     }
   }
 
+  uint64_t lastOdomTimestamp = 0;
+
   void Update() {
+    fmt::println("gtsam_tags_node:Update begins");
     bool readyToOptimize = true;
 
-    if (const auto prior = configListener.NewPosePrior()) {
+    const auto prior = configListener.NewPosePrior();
+    if (prior && !gotInitialGuess) {
       localizer->Reset(prior->value.pose, prior->value.noise, prior->time);
       gotInitialGuess = true;
     }
@@ -82,12 +88,17 @@ public:
 
       // Reset initial guess tracking since we got a new layout and our factors
       // are technically now wrong
+      fmt::println("Got new tag layout, we don't got an initial guess anymore");
       gotInitialGuess = false;
     }
 
     readyToOptimize &= gotInitialGuess;
 
-    for (const auto &it : odomListener.Update()) {
+    auto odomUpdate = odomListener.Update();
+    fmt::println("Got {} odometry updates", odomUpdate.size());
+    for (const auto &it : odomUpdate) {
+      lastOdomTimestamp = lastOdomTimestamp < it.timeUs ? it.timeUs : lastOdomTimestamp;
+      fmt::println("Odometry timestamp {}", it.timeUs);
       localizer->AddOdometry(it);
     }
 
@@ -96,10 +107,29 @@ public:
 
     for (auto &cam : cameraListeners) {
       bool ready = cam.ReadyToOptimize();
+      if(!ready) fmt::println("A Camera not ready");
       readyToOptimize &= ready;
 
       if (ready) {
-        for (const auto &it : cam.Update()) {
+        fmt::println("Iterating over a new cameralistener");
+        auto cam_update = cam.Update();
+        fmt::println("Got {} camera observations", cam_update.size());
+        for (const auto &it : cam_update) {
+          fmt::println("Camera obs timestamp {}", it.timeUs);
+          if (it.timeUs > lastOdomTimestamp) {
+            fmt::println("Camera observation is newer than last odometry, skipping");
+            tooNewCameraObservations.push_back(it);
+            continue;
+          }
+          localizer->AddTagObservation(it);
+        }
+      }
+
+      // check to see if we can process any in the backlog
+      for (const auto &it : tooNewCameraObservations) {
+        if (it.timeUs <= lastOdomTimestamp) {
+          fmt::println("Processing a camera observation from the backlog");
+          tooNewCameraObservations.pop_front();
           localizer->AddTagObservation(it);
         }
       }
