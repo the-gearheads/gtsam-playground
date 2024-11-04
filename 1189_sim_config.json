@@ -3,7 +3,15 @@
     "ntServerURI": "127.0.0.1",
     "cameras": [
         {
-            "subtableName": "sim_camera1",
+            "subtableName": "FRONT_LEFT",
+            "pixelNoise": 10
+        },
+        {
+            "subtableName": "FRONT_RIGHT",
+            "pixelNoise": 10
+        },
+        {
+            "subtableName": "BACK_LEFT",
             "pixelNoise": 10
         }
     ],

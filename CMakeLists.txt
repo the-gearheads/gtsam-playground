@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+
 set(CXX_STANDARD 20)
 
 project(gtsam-playground)
@@ -15,7 +16,7 @@ set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 include(GenResources)
 
 add_compile_options(-fno-omit-frame-pointer)
-set(CXXFLAGS "${CXXFLAGS} -fno-omit-frame-pointer -Wno-psabi")
+set(CXXFLAGS "${CXXFLAGS} -fno-omit-frame-pointer -Wno-psabi -Wno-error=calloc-transposed-args")
 set(CMAKE_INSTALL_RPATH "lib")
 
 add_subdirectory(gtsam)
@@ -79,6 +80,7 @@ target_link_libraries(
 )
 target_include_directories(localizer_test PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(localizer_test PRIVATE -g -Og)
+target_compile_options(apriltag PRIVATE -Wno-error)
 
 include(GoogleTest)
 gtest_discover_tests(localizer_test)

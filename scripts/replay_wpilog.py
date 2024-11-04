@@ -6,7 +6,8 @@ import struct
 
 wpilog = DataLogReader(
     # "/home/matt/Documents/GitHub/gtsam-playground/data/factor_graph_reference_1.wpilog"
-    "/home/matt/Downloads/harry-gtsam-data/Log_24-04-20_08-56-21_e2_sim.wpilog"
+    #"/home/matt/Downloads/harry-gtsam-data/Log_24-04-20_08-56-21_e2_sim.wpilog"
+    "/home/michael/Documents/gtam stuff.wpilog"
 )
 
 from dataclasses import dataclass
@@ -54,6 +55,8 @@ def recordToNt(record: DataLogRecord, entry: GenericPublisher):
             entry.setIntegerArray(record.getIntegerArray())
         case "raw" | "rawBytes":
             entry.setRaw(record.getRaw())
+        case "URCLr2_aliases" | "URCLr2_periodic" | "URCLr2_persistent":
+             return
         case _:
             raise Exception("Unknown type string " + type)
 
@@ -82,7 +85,7 @@ for msg in wpilog:
         print("Got start for " + start.name)
 
         if any([re.match(it, start.name) for it in ignoredTopics]):
-            # print("ignoring " + start.name)
+            print("ignoring " + start.name)
             pass
         else:
             topicMap[start.entry] = topicNameToPublisher(start)

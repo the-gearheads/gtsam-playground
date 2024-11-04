@@ -430,7 +430,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
 }
 
 void Localizer::Optimize() {
-  // fmt::println("Adding {} factors!", graph.size());
+  fmt::println("Adding {} factors!", graph.size());
   // graph.print("New factors: ");
   // currentEstimate.print("New estimates: ");
 

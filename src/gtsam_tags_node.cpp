@@ -76,7 +76,8 @@ public:
   void Update() {
     bool readyToOptimize = true;
 
-    if (const auto prior = configListener.NewPosePrior()) {
+    const auto prior = configListener.NewPosePrior();
+    if (prior) {
       localizer->Reset(prior->value.pose, prior->value.noise, prior->time);
       gotInitialGuess = true;
     }
