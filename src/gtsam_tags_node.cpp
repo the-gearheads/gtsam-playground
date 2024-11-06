@@ -58,6 +58,7 @@ private:
   ConfigListener configListener;
   std::vector<CameraListener> cameraListeners;
   std::deque<CameraVisionObservation> tooNewCameraObservations;
+  std::deque<CameraVisionObservation> noIsamHistoryObservations;
 
   bool gotInitialGuess = false;
 
@@ -74,12 +75,15 @@ public:
   uint64_t lastOdomTimestamp = 0;
 
   void Update() {
+    fmt::println("New Update()");
     bool readyToOptimize = true;
 
     const auto prior = configListener.NewPosePrior();
     if (prior) {
+      fmt::println("Resetting..");
       localizer->Reset(prior->value.pose, prior->value.noise, prior->time);
       gotInitialGuess = true;
+      // localizer->Optimize();
     }
 
     if (const auto layout = configListener.NewTagLayout()) {
@@ -97,8 +101,7 @@ public:
       localizer->AddOdometry(it);
     }
 
-    // localizer->Print("=========================\nAfter adding odometry
-    // factors");
+    fmt::println("=========================\nAfter adding odometry factors");
 
     for (auto &cam : cameraListeners) {
       bool ready = cam.ReadyToOptimize();
@@ -111,7 +114,10 @@ public:
             tooNewCameraObservations.push_back(it);
             continue;
           }
-          localizer->AddTagObservation(it);
+          if(!localizer->AddTagObservation(it)) {
+            fmt::println("Camera observation has no isam history, saving for later");
+            noIsamHistoryObservations.push_back(it);
+          }
         }
       }
     }
@@ -120,10 +126,23 @@ public:
     for (auto it = tooNewCameraObservations.begin(); it != tooNewCameraObservations.end();) {
       if (it->timeUs <= lastOdomTimestamp) {
         fmt::println("Processing a camera observation from the backlog");
-        localizer->AddTagObservation(*it);
+        if(!localizer->AddTagObservation(*it)) {
+          fmt::println("Backlog camera observation has no isam history, saving for later");
+          noIsamHistoryObservations.push_back(*it);
+        }
         it = tooNewCameraObservations.erase(it); // erase() returns the next valid iterator
       } else {
         ++it; // Skip if still too new
+      }
+    }
+
+    //check the "no isam history" backlog
+    for (auto it = noIsamHistoryObservations.begin(); it != noIsamHistoryObservations.end();) {
+      if (localizer->AddTagObservation(*it)) {
+        fmt::println("Processed a camera observation from the isam backlog");
+        it = noIsamHistoryObservations.erase(it); // erase() returns the next valid iterator
+      } else {
+        ++it; // Skip if still no isam history
       }
     }
 

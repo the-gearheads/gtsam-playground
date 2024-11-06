@@ -4,25 +4,25 @@
     "cameras": [
         {
             "subtableName": "FRONT_LEFT",
-            "pixelNoise": 10
+            "pixelNoise": 80
         },
         {
             "subtableName": "FRONT_RIGHT",
-            "pixelNoise": 10
+            "pixelNoise": 80
         },
         {
             "subtableName": "BACK_LEFT",
-            "pixelNoise": 10
+            "pixelNoise": 80
         }
     ],
     "rotNoise": [
-        0.0087263889,
-        0.0087263889,
+        0,
+        0,
         0.0087263889
     ],
     "transNoise": [
         0.004,
         0.004,
-        0.004
+        0
     ]
 }

@@ -383,17 +383,22 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
   // }
 }
 
-void Localizer::AddTagObservation(CameraVisionObservation obs) {
+bool Localizer::AddTagObservation(CameraVisionObservation obs) {
   const auto &isamTimestamps = smootherISAM2.timestamps();
 
   if (isamTimestamps.empty()) {
-    std::cerr << "No isam history yet - skipping" << std::endl;
-    return;
+    // in practice, are timestamps that hit this point reusable in the future?
+    // std::cerr << "No isam history yet - skipping" << std::endl;
+    return false;
   }
 
   if (obs.timeUs < isamTimestamps.begin()->second) {
-    std::cerr << "Timestamp is before even isam history - skipping" << std::endl;
-    return;
+    std::cerr << "Timestamp is before even isam history - skipping. Timestamps are ";
+    for (const auto &pair : isamTimestamps) {
+      std::cerr << std::to_string(pair.second) << ", ";
+    }
+    std::cerr << ". Our timestamp is " << obs.timeUs << std::endl;
+    return true;
   }
 
   int tagID = obs.tagID;
@@ -407,7 +412,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
   if (!worldPcorners_opt) {
     // todo return bad thing
     fmt::println("Could not find tag {} in our map!", tagID);
-    return;
+    return true;
   }
   auto worldPcorners = worldPcorners_opt.value();
 
@@ -427,6 +432,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
 
     graph.addExpressionFactor(prediction, measurement, cameraNoise);
   }
+  return true;
 }
 
 void Localizer::Optimize() {
