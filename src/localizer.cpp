@@ -436,8 +436,8 @@ void Localizer::Optimize() {
     auto min_time_it = keyToTimestamp.lower_bound(min_time);
 
     // Prepare to remove all our culled factors
-    for (auto it = keyToTimestamp.begin(); it < min_time_it; it++) {
-      factorsToRemove.push_back(it.first);
+    for (auto it = keyToTimestamp.begin(); *it < *min_time_it; it++) {
+      factorsToRemove.push_back(it->first);
     }
     // And cull them from our map
     keyToTimestamp.erase(keyToTimestamp.begin(), min_time_it);

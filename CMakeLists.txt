@@ -20,8 +20,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Versions to grab from Maven
 set(FRC_YEAR "frc2025")
-set(GTSAM_VERSION "4.3-2")
-set(WPILIB_VERSION "4.3-2")
+set(GTSAM_VERSION "4.3-3")
 
 # type can be "", "debug", "static", or "staticdebug"
 set(BUILD_TYPE "static")
@@ -88,23 +87,28 @@ FETCH_MAVEN(
   gtsam_libs
   gtsam_include_path
 )
-FETCH_MAVEN(release wpiutil wpiutil 2025.2.1
+FETCH_MAVEN(release wpiutil wpiutil 2025.3.2
   wpiutil_libs
   wpiutil_include_path
 )
-FETCH_MAVEN(release wpimath wpimath 2025.2.1
+FETCH_MAVEN(release cscore cscore 2025.3.2
+  cscore_libs
+  cscore_include_path
+)
+
+FETCH_MAVEN(release wpimath wpimath 2025.3.2
   wpimath_libs
   wpimath_include_path
 )
-FETCH_MAVEN(release apriltag apriltag 2025.2.1
+FETCH_MAVEN(release apriltag apriltag 2025.3.2
   apriltag_libs
   apriltag_include_path
 )
-FETCH_MAVEN(release ntcore ntcore 2025.2.1
+FETCH_MAVEN(release ntcore ntcore 2025.3.2
   ntcore_libs
   ntcore_include_path
 )
-FETCH_MAVEN(release wpinet wpinet 2025.2.1
+FETCH_MAVEN(release wpinet wpinet 2025.3.2
   wpinet_libs
   wpinet_include_path
 )
@@ -125,14 +129,22 @@ message("Adding libs: ${gtsam_libs} ${wpiutil_libs} ${wpimath_libs} ${apriltag_l
 
 target_include_directories(gtsam-localizer SYSTEM PUBLIC
   ${gtsam_include_path}
-  ${wpimath_include_path}
   ${wpiutil_include_path}
-  ${apriltag_include_path}
+  ${wpimath_include_path}
+  ${cscore_include_path}
   ${ntcore_include_path}
+  ${apriltag_include_path}
 )
 target_link_libraries(gtsam-localizer
 PUBLIC
   Eigen3::Eigen
+  ${gtsam_libs}
+  ${wpiutil_libs}
+  ${wpimath_libs}
+  ${cscore_libs}
+  ${wpinet_libs}
+  ${ntcore_libs}
+  ${apriltag_libs}
 )
 
 if (MSVC)
@@ -144,12 +156,6 @@ add_executable(gtsam-node
 )
 target_link_libraries(gtsam-node
   gtsam-localizer
-  ${gtsam_libs}
-  ${wpiutil_libs}
-  ${wpimath_libs}
-  ${wpinet_libs}
-  ${ntcore_libs}
-  ${apriltag_libs}
 )
 
 install(TARGETS gtsam-node)

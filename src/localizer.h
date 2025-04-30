@@ -102,6 +102,7 @@ protected:
 
   // ISAM + map of keys <-> times
   gtsam::ISAM2 smootherISAM2 {};
+  
   std::map<gtsam::Key, double> keyToTimestamp {};
 
   // Current "tip" world->body estimate
