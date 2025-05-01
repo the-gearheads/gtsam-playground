@@ -26,9 +26,11 @@ if(CCACHE_PRESENT)
   set(CMAKE_CXX_COMPILER_LAUNCHER "ccache")
 endif()
 
+set(BUILD_SHARED_LIBS OFF)
 
 include(FetchContent)
 
+find_package(OpenCV REQUIRED)
 
 # Fetch Eigen -- From thirdparty-gtsam
 message("Fetching Eigen")
@@ -54,7 +56,6 @@ set(GTSAM_USE_BOOST_FEATURES OFF)
 set(GTSAM_BUILD_PYTHON OFF)
 set(GTSAM_BUILD_EXAMPLES_ALWAYS OFF)
 set(GTSAM_BUILD_TESTS OFF)
-set(BUILD_SHARED_LIBS OFF)
 set(GTSAM_FORCE_SHARED_LIB OFF)
 set(GTSAM_FORCE_STATIC_LIB ON)
 set(GTSAM_USE_SYSTEM_EIGEN ON)
@@ -71,12 +72,12 @@ FetchContent_MakeAvailable(gtsam)
 
 set(WPILIB_DIR "" CACHE PATH "Path to existing WPILib clone, if any")
 
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" INTERNAL)
-set(WITH_SIMULATION_MODULES OFF CACHE BOOL "" INTERNAL)
-set(WITH_TESTS OFF CACHE BOOL "" INTERNAL)
-set(WITH_WPILIB OFF CACHE BOOL "" INTERNAL)
-set(NO_WERROR ON CACHE BOOL "" INTERNAL)
-set(USE_SYSTEM_EIGEN ON CACHE BOOL "" INTERNAL) # use the same eigen that we're using for gtsam, just so we're using the same exact eigen everywhere
+set(WITH_SIMULATION_MODULES OFF)
+set(WITH_TESTS OFF)
+set(WITH_WPILIB ON)
+set(NO_WERROR ON)
+set(WITH_PROTOBUF OFF)
+set(USE_SYSTEM_EIGEN ON) # use the same eigen that we're using for gtsam, just so we're using the same exact eigen everywhere
 
 
 # this probably doesnt work right if the build dir isnt clean and wpilib_dir becomes defined
@@ -111,7 +112,6 @@ target_link_libraries(gtsam-localizer PUBLIC
   wpimath
   apriltag
   ntcore
-  cscore # opencv
   gtsam
 )
 

@@ -24,6 +24,27 @@ And build and run the actual executable! This will take a while
 clear && cmake --build build --target gtsam-node && ./build/bin/gtsam-node
 ```
 
+## Cross Compiling
+We need to cross-compile opencv into a prefix, then we can build the project.
+```bash
+export WORK=$(pwd)
+# in this case we're doing x86->arm64 crosscompilation
+wget "https://github.com/wpilibsuite/opensdk/releases/download/v2025-1/arm64-bookworm-2025-x86_64-linux-gnu-Toolchain-12.2.0.tgz"
+tar xvf arm64-bookworm-2025-x86_64-linux-gnu-Toolchain-12.2.0.tgz
+mkdir prefix
+
+git clone https://github.com/opencv/opencv -b 4.11.0 --depth 1
+cd opencv && mkdir build && cd build
+cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=$WORK/bookworm/toolchain-config.cmake -DCMAKE_INSTALL_PREFIX=$WORK/prefix -DBUILD_SHARED_LIBS=off -DBUILD_opencv_ml=OFF -DBUILD_opencv_objdetect=off -DBUILD_opencv_dnn=off -DBUILD_opencv_apps=off -DBUILD_TESTS=off -DBUILD_PERF_TESTS=off -DWITH_PROTOBUF=OFF
+ninja -j10 install
+
+cd $WORK
+git clone https://github.com/the-gearheads/gtsam-playground -b other-stuff
+cd gtsam-playground && mkdir build && cd build
+cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=$WORK/bookworm/toolchain-config.cmake -DCMAKE_FIND_ROOT_PATH=$WORK/prefix
+ninja -j10
+```
+
 # Running a photon sim example
 
 [This sim example](https://github.com/PhotonVision/champs_2024/tree/gtsam-testing/sim_projects/apriltag_yaw_only) in the gtsam-testing branch is set up to provide simulated data to the current build of gtsam-playground. Just run it as a robot simulation project! The NT server URI is set by changing the JSON below. If you're running this in WSL2, the URI must be set to the IP address of your computer in **Windows**.
