@@ -154,7 +154,7 @@ std::vector<CameraVisionObservation> CameraListener::Update() {
         fmt::println("Camera {}: no camera calibration set?", config.subtableName);
         continue;
       }
-      cv::undistortPoints(cvCornersIn, cvCornersOut, *cameraK_cv, *distCoeffs_cv);
+      cv::undistortImagePoints(cvCornersIn, cvCornersOut, *cameraK_cv, *distCoeffs_cv);
       vector<Point2> cornersForGtsam;
       cornersForGtsam.reserve(4);
       for (const auto &c : cvCornersOut) {
