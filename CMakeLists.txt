@@ -108,11 +108,16 @@ add_library(gtsam-localizer
   src/config_listener.cpp
 )
 
+target_include_directories(gtsam-localizer PUBLIC
+  ${OpenCV_INCLUDE_DIRS}
+)
+
 target_link_libraries(gtsam-localizer PUBLIC
   wpimath
   apriltag
   ntcore
   gtsam
+  ${OpenCV_LIBS}
 )
 
 if (MSVC)
