@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25..3.32)
+cmake_minimum_required(VERSION 3.28..3.32)
 
 project(gtsam-playground CXX)
 
@@ -18,54 +18,20 @@ set(CMAKE_INSTALL_RPATH "lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Versions to grab from Maven
-set(FRC_YEAR "frc2025")
-set(GTSAM_VERSION "4.3-3")
-
-# type can be "", "debug", "static", or "staticdebug"
-set(BUILD_TYPE "static")
-
-if (NOT BUILD_ARCH)
-  set(BUILD_ARCH "linuxx86-64")
+# use ccache if we got it
+find_program(CCACHE_PRESENT "ccache")
+if(CCACHE_PRESENT)
+  message("Using Ccache")
+  set(CMAKE_C_COMPILER_LAUNCHER "ccache")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "ccache")
 endif()
+
 
 include(FetchContent)
 
-# Download stuff
-function(FETCH_MAVEN repository package libname libversion libpath includepath)
-  message("Repo ${repository} package ${package} libname ${libname} version ${libversion}")
 
-  FetchContent_Declare(
-      "${libname}_lib"
-      URL https://frcmaven.wpi.edu/artifactory/${repository}/edu/wpi/first/${package}/${libname}-cpp/${libversion}/${libname}-cpp-${libversion}-${BUILD_ARCH}${BUILD_TYPE}.zip
-  )
-  FetchContent_MakeAvailable("${libname}_lib")
-
-
-  FetchContent_Declare(
-      "${libname}_header"
-      URL https://frcmaven.wpi.edu/artifactory/${repository}/edu/wpi/first/${package}/${libname}-cpp/${libversion}/${libname}-cpp-${libversion}-headers.zip
-  )
-  FetchContent_MakeAvailable("${libname}_header")
-
-  file(GLOB_RECURSE lib_glob
-    "${${libname}_lib_SOURCE_DIR}/**/*.lib"
-    "${${libname}_lib_SOURCE_DIR}/**/*.so*"
-    "${${libname}_lib_SOURCE_DIR}/**/*.dylib*"
-    "${${libname}_lib_SOURCE_DIR}/**/*.a"
-  )
-
-  set(${includepath} ${${libname}_header_SOURCE_DIR})
-  set(${libpath} ${lib_glob})
-
-  message("Outputting to ${libpath}: ${lib_glob}")
-  message("and ${includepath}: ${${libname}_header_SOURCE_DIR}")
-
-  return(PROPAGATE ${includepath} ${libpath})
-endfunction()
-
-
-# Fetch Eigen
+# Fetch Eigen -- From thirdparty-gtsam
+message("Fetching Eigen")
 set(EIGEN_BUILD_BLAS OFF)
 set(EIGEN_BUILD_LAPACK OFF)
 set(EIGEN_BUILD_CMAKE_PACKAGE ON)
@@ -73,45 +39,62 @@ FetchContent_Declare(
     Eigen3
     GIT_REPOSITORY    https://gitlab.com/libeigen/eigen.git
     GIT_TAG           0fb2ed140d4fc0108553ecfb25f2d7fc1a9319a1
-    SYSTEM
-)
-fetchcontent_makeavailable(Eigen3)
-
-
-# and wpilib libraries
-FETCH_MAVEN(
-  development
-  thirdparty/${FRC_YEAR}/gtsam
-  gtsam
-  ${GTSAM_VERSION}
-  gtsam_libs
-  gtsam_include_path
-)
-FETCH_MAVEN(release wpiutil wpiutil 2025.3.2
-  wpiutil_libs
-  wpiutil_include_path
-)
-FETCH_MAVEN(release cscore cscore 2025.3.2
-  cscore_libs
-  cscore_include_path
+    SYSTEM # Ignore warnings
+    # Make gtsam (and our in-tree wpilib build) pick up this Eigen as our system Eigen
+    OVERRIDE_FIND_PACKAGE
+    EXCLUDE_FROM_ALL
 )
 
-FETCH_MAVEN(release wpimath wpimath 2025.3.2
-  wpimath_libs
-  wpimath_include_path
+# And build GTSAM -- From thirdparty-gtsam
+message("Fetching Gtsam")
+set(GTSAM_COMPILE_OPTIONS_PRIVATE_DEBUG CACHE INTERNAL FORCE)
+set(GTSAM_COMPILE_OPTIONS_PRIVATE_RELWITHDEBINFO CACHE INTERNAL FORCE)
+set(GTSAM_ENABLE_BOOST_SERIALIZATION OFF)
+set(GTSAM_USE_BOOST_FEATURES OFF)
+set(GTSAM_BUILD_PYTHON OFF)
+set(GTSAM_BUILD_EXAMPLES_ALWAYS OFF)
+set(GTSAM_BUILD_TESTS OFF)
+set(BUILD_SHARED_LIBS OFF)
+set(GTSAM_FORCE_SHARED_LIB OFF)
+set(GTSAM_FORCE_STATIC_LIB ON)
+set(GTSAM_USE_SYSTEM_EIGEN ON)
+
+FetchContent_Declare(
+    gtsam
+    GIT_REPOSITORY    https://github.com/borglab/gtsam
+    GIT_TAG           42cc0ac922460d506a7bbf3a37a4a0b1e103b79e
+    GIT_SHALLOW 1
+    EXCLUDE_FROM_ALL
 )
-FETCH_MAVEN(release apriltag apriltag 2025.3.2
-  apriltag_libs
-  apriltag_include_path
-)
-FETCH_MAVEN(release ntcore ntcore 2025.3.2
-  ntcore_libs
-  ntcore_include_path
-)
-FETCH_MAVEN(release wpinet wpinet 2025.3.2
-  wpinet_libs
-  wpinet_include_path
-)
+FetchContent_MakeAvailable(gtsam)
+
+
+set(WPILIB_DIR "" CACHE PATH "Path to existing WPILib clone, if any")
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" INTERNAL)
+set(WITH_SIMULATION_MODULES OFF CACHE BOOL "" INTERNAL)
+set(WITH_TESTS OFF CACHE BOOL "" INTERNAL)
+set(WITH_WPILIB OFF CACHE BOOL "" INTERNAL)
+set(NO_WERROR ON CACHE BOOL "" INTERNAL)
+set(USE_SYSTEM_EIGEN ON CACHE BOOL "" INTERNAL) # use the same eigen that we're using for gtsam. technically should be the same tag as the one above, but eh
+
+
+# this probably doesnt work right if the build dir isnt clean and wpilib_dir becomes defined
+if(WPILIB_DIR STREQUAL "")
+  # fetch it ourselves
+  message("Fetching WPILib")
+  FetchContent_Declare(
+    allwpilib
+    GIT_REPOSITORY https://github.com/wpilibsuite/allwpilib
+    GIT_TAG        refs/tags/v2025.3.2
+    GIT_SHALLOW 1
+    EXCLUDE_FROM_ALL
+  )
+  FetchContent_MakeAvailable(allwpilib)
+else()
+  add_subdirectory(${WPILIB_DIR} ${CMAKE_BINARY_DIR}/allwpilib EXCLUDE_FROM_ALL)
+endif()
+
 
 add_library(gtsam-localizer
   src/localizer.cpp
@@ -124,49 +107,37 @@ add_library(gtsam-localizer
   src/config_listener.cpp
 )
 
-message("Adding includes: ${gtsam_include_path} ${wpimath_include_path} ${wpiutil_include_path} ${apriltag_include_path} ")
-message("Adding libs: ${gtsam_libs} ${wpiutil_libs} ${wpimath_libs} ${apriltag_libs} ${ntcore_libs}")
-
-target_include_directories(gtsam-localizer SYSTEM PUBLIC
-  ${gtsam_include_path}
-  ${wpiutil_include_path}
-  ${wpimath_include_path}
-  ${cscore_include_path}
-  ${ntcore_include_path}
-  ${apriltag_include_path}
-)
-target_link_libraries(gtsam-localizer
-PUBLIC
-  Eigen3::Eigen
-  ${gtsam_libs}
-  ${wpiutil_libs}
-  ${wpimath_libs}
-  ${cscore_libs}
-  ${wpinet_libs}
-  ${ntcore_libs}
-  ${apriltag_libs}
+target_link_libraries(gtsam-localizer PUBLIC
+  wpimath
+  apriltag
+  ntcore
+  gtsam
 )
 
 if (MSVC)
   target_link_libraries(gtsam-localizer PUBLIC dbghelp.lib) 
 endif()
 
+
 add_executable(gtsam-node
   src/gtsam_tags_node.cpp
 )
+
 target_link_libraries(gtsam-node
   gtsam-localizer
 )
 
 install(TARGETS gtsam-node)
 
-include(FetchContent)
+set(gtest_build_tests OFF CACHE BOOL "" INTERNAL) # we dont wanna include python pointlessly
+set(gtest_build_samples OFF CACHE BOOL "" INTERNAL)
+set(gtest_force_shared_crt ON CACHE BOOL "" INTERNAL) # for windows, says the original comment
+
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+  EXCLUDE_FROM_ALL
 )
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 enable_testing()
