@@ -146,7 +146,7 @@ std::vector<CameraVisionObservation> CameraListener::Update() {
       vector<cv::Point2f> cvCornersOut;
       cvCornersIn.reserve(4);
       for (const auto &c : t.corners) {
-        fmt::println("ID: {}, Corner: {}, {}", t.id, c.first, c.second);
+        // fmt::println("ID: {}, Corner: {}, {}", t.id, c.first, c.second);
         cvCornersIn.emplace_back(std::move(cv::Point2f{(float)c.first, (float)c.second}));
       }
       // undistort the corners
@@ -159,7 +159,7 @@ std::vector<CameraVisionObservation> CameraListener::Update() {
       cornersForGtsam.reserve(4);
       for (const auto &c : cvCornersOut) {
         cornersForGtsam.emplace_back(c.x, c.y);
-        fmt::println("Undistorted corner: {}, {}", c.x, c.y);
+        // fmt::println("Undistorted corner: {}, {}", c.x, c.y);
       }
 
       ret.emplace_back(tarr.time, t.id, cornersForGtsam, *cameraK,
