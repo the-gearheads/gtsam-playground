@@ -76,7 +76,7 @@ set(WITH_SIMULATION_MODULES OFF CACHE BOOL "" INTERNAL)
 set(WITH_TESTS OFF CACHE BOOL "" INTERNAL)
 set(WITH_WPILIB OFF CACHE BOOL "" INTERNAL)
 set(NO_WERROR ON CACHE BOOL "" INTERNAL)
-set(USE_SYSTEM_EIGEN ON CACHE BOOL "" INTERNAL) # use the same eigen that we're using for gtsam. technically should be the same tag as the one above, but eh
+set(USE_SYSTEM_EIGEN ON CACHE BOOL "" INTERNAL) # use the same eigen that we're using for gtsam, just so we're using the same exact eigen everywhere
 
 
 # this probably doesnt work right if the build dir isnt clean and wpilib_dir becomes defined
@@ -129,7 +129,7 @@ target_link_libraries(gtsam-node
 
 install(TARGETS gtsam-node)
 
-set(gtest_build_tests OFF CACHE BOOL "" INTERNAL) # we dont wanna include python pointlessly
+set(gtest_build_tests OFF CACHE BOOL "" INTERNAL) # we dont wanna include python pointlessly (update: its still getting find_packaged somewhere)
 set(gtest_build_samples OFF CACHE BOOL "" INTERNAL)
 set(gtest_force_shared_crt ON CACHE BOOL "" INTERNAL) # for windows, says the original comment
 
