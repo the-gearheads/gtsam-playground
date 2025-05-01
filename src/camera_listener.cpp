@@ -146,8 +146,8 @@ std::vector<CameraVisionObservation> CameraListener::Update() {
       vector<cv::Point2f> cvCornersOut;
       cvCornersIn.reserve(4);
       for (const auto &c : t.corners) {
-        fmt::println("Corner: {}, {}", c.first, c.second);
-        cvCornersIn.emplace_back(c.first, c.second);
+        fmt::println("ID: {}, Corner: {}, {}", t.id, c.first, c.second);
+        cvCornersIn.emplace_back(std::move(cv::Point2f{(float)c.first, (float)c.second}));
       }
       // undistort the corners
       if(!cameraK_cv.has_value() || !distCoeffs_cv.has_value()) {
