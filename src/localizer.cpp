@@ -207,22 +207,22 @@ void Localizer::Optimize() {
   // currentEstimate.print("New estimates: ");
 
 
-  {
-    // Cull old vision measurements. Our times are ordered by key, which just so happens to be X(timestamp, us)
-    auto MAX_AGE = 30 * 1'000'000;
-    auto min_time = currStateIdx - MAX_AGE;
-    auto min_time_it = keyToTimestamp.lower_bound(min_time);
+  // {
+  //   // Cull old vision measurements. Our times are ordered by key, which just so happens to be X(timestamp, us)
+  //   auto MAX_AGE = 30 * 1'000'000;
+  //   auto min_time = currStateIdx - MAX_AGE;
+  //   auto min_time_it = keyToTimestamp.lower_bound(min_time);
 
-    // Prepare to remove all our culled factors
-    for (auto it = keyToTimestamp.begin(); *it < *min_time_it; it++) {
-      factorsToRemove.push_back(it->first);
-      fmt::println("removing {}, {}", it->first, it->second);
-    }
-    // And cull them from our map
-    keyToTimestamp.erase(keyToTimestamp.begin(), min_time_it);
-  }
+  //   // Prepare to remove all our culled factors
+  //   for (auto it = keyToTimestamp.begin(); *it < *min_time_it; it++) {
+  //     factorsToRemove.push_back(it->first);
+  //     fmt::println("removing {}, {}", it->first, it->second);
+  //   }
+  //   // And cull them from our map
+  //   keyToTimestamp.erase(keyToTimestamp.begin(), min_time_it);
+  // }
 
-  smootherISAM2.update(graph, currentEstimate, factorsToRemove);
+  smootherISAM2.update(graph, currentEstimate, newTimestamps, factorsToRemove);
 
   // reset the graph; isam wants to be fed factors to be -added-
   graph.resize(0);
