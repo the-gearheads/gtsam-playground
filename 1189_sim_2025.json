@@ -6,7 +6,15 @@
       {
           "subtableName": "BACK_RIGHT",
           "pixelNoise": 10
-      }
+      },
+      {
+        "subtableName": "BACK_LEFT_2025",
+        "pixelNoise": 10
+    },
+    {
+        "subtableName": "BACK_RIGHT",
+        "pixelNoise": 10
+    }
   ],
   "rotNoise": [
       0.0087263889,
