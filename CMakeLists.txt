@@ -111,6 +111,7 @@ target_link_libraries(gtsam-localizer PUBLIC
   wpimath
   apriltag
   ntcore
+  cscore # opencv
   gtsam
 )
 

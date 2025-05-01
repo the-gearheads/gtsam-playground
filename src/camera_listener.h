@@ -37,6 +37,7 @@
 #include <networktables/DoubleArrayTopic.h>
 #include <networktables/StructArrayTopic.h>
 #include <networktables/StructTopic.h>
+#include <opencv2/core.hpp>
 
 #include "TagDetectionStruct.h"
 #include "config.h"
@@ -60,6 +61,9 @@ public:
 private:
   // Camera (pinhole) calibration coefficients
   std::optional<gtsam::Cal3_S2> cameraK;
+  std::optional<cv::Mat> cameraK_cv;
+  std::optional<cv::Mat> distCoeffs_cv;
+  
   // Camera offset
   std::optional<::gtsam::Pose3> robotTcamera;
 

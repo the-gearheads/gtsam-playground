@@ -28,6 +28,7 @@
 #include <networktables/NetworkTableInstance.h>
 
 #include "gtsam_utils.h"
+#include <opencv2/calib3d.hpp>
 
 using std::vector;
 using namespace gtsam;
@@ -74,7 +75,7 @@ bool CameraListener::ReadyToOptimize() {
   if (last_K.time > 0) {
     // Update calibration!
     std::vector<double> K_ = last_K.value;
-    if (K_.size() != 4) {
+    if (K_.size() != 12) {
       fmt::println("Camera {}: K of odd size {}?", config.subtableName,
                    K_.size());
       return false;
@@ -85,6 +86,16 @@ bool CameraListener::ReadyToOptimize() {
                         K_[2], K_[3]};
     if (!cameraK || !cameraK->equals(newK, 1e-6)) {
       cameraK = newK;
+      double cameraK_arr[3][3] = {{K_[0], 0, K_[2]}, {0, K_[2], K_[3]}, {0, 0, 1}};
+      if (cameraK_cv.has_value()) cameraK_cv->release();
+      if (distCoeffs_cv.has_value()) distCoeffs_cv->release();
+
+      cameraK_cv = cv::Mat(3, 3, CV_64F, cameraK_arr);
+
+      distCoeffs_cv = cv::Mat(8, 1, CV_64F, cv::Scalar(0));
+      for(int i = 0; i < 8; i++) {
+        distCoeffs_cv->at<double>(i, 0) = K_[4 + i];
+      }
       cameraK->print("New camera calibration");
     }
   }
@@ -126,10 +137,18 @@ std::vector<CameraVisionObservation> CameraListener::Update() {
   for (const auto &tarr : tags) {
     // For each tag in this tag array
     for (const auto &t : tarr.value) {
+      vector<cv::Point2f> cvCornersIn;
+      vector<cv::Point2f> cvCornersOut;
+      cvCornersIn.reserve(4);
+      for (const auto &c : t.corners) {
+        cvCornersIn.emplace_back(c.first, c.second);
+      }
+      // undistort the corners
+      cv::undistortPoints(cvCornersIn, cvCornersOut, *cameraK_cv, *distCoeffs_cv);
       vector<Point2> cornersForGtsam;
       cornersForGtsam.reserve(4);
-      for (const auto &c : t.corners) {
-        cornersForGtsam.emplace_back(c.first, c.second);
+      for (const auto &c : cvCornersOut) {
+        cornersForGtsam.emplace_back(c.x, c.y);
       }
 
       ret.emplace_back(tarr.time, t.id, cornersForGtsam, *cameraK,
