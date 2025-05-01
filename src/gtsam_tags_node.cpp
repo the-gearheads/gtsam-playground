@@ -77,8 +77,11 @@ public:
     bool readyToOptimize = true;
 
     if (const auto prior = configListener.NewPosePrior()) {
+      if(!gotInitialGuess) {
+      fmt::println("Got prior");
       localizer->Reset(prior->value.pose, prior->value.noise, prior->time);
       gotInitialGuess = true;
+      }
     }
 
     if (const auto layout = configListener.NewTagLayout()) {

@@ -115,7 +115,8 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
   const KeyTimeMap &isamTimestamps = smootherISAM2.timestamps();
   const auto &isamEntryAfter = isamTimestamps.upper_bound(newKey);
   if (isamEntryAfter == isamTimestamps.begin()) {
-    throw std::runtime_error("Timestamp is before even isam history");
+    fmt::println("Timestamp is before even isam history isamEntryAfter={}, begin={}", isamEntryAfter->first, isamTimestamps.begin()->first);
+    return 0;
   }
 
   // safe to do this, we checked we aren't at the start
@@ -130,8 +131,8 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
   KeyTimeMap::iterator notAddedAfter = newTimestamps.upper_bound(newKey);
 
   if (notAddedAfter == newTimestamps.end()) {
-    throw std::runtime_error(
-        "Timestamp past ISAM history, but not in yet-to-be-added");
+    fmt::println("Timestamp past ISAM history, but not in yet-to-be-added");
+    return 0;
   }
 
   if (notAddedAfter == newTimestamps.begin() &&
@@ -162,6 +163,14 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
 
 void Localizer::AddTagObservation(CameraVisionObservation obs) {
   const auto &isamTimestamps = smootherISAM2.timestamps();
+
+  if (isamTimestamps.empty()) {
+    // in practice, are timestamps that hit this point reusable in the future?
+    // std::cerr << "No isam history yet - skipping" << std::endl;
+    fmt::println("No isam history yet - skipping");
+    return;
+  }
+
   if (obs.timeUs < isamTimestamps.begin()->second) {
     std::cerr << "Timestamp is before even isam history - skipping"
               << std::endl;
@@ -187,6 +196,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
 
   // Find where we should attach our new factors to
   Key stateAtTime = GetOrInsertKey(newKey, timeUs);
+  if (stateAtTime == 0) { return; }
 
   for (size_t i = 0; i < NUM_CORNERS; i++) {
     // corner in image space
