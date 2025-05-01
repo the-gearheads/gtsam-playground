@@ -157,9 +157,9 @@ std::vector<CameraVisionObservation> CameraListener::Update() {
       cv::undistortPoints(cvCornersIn, cvCornersOut, *cameraK_cv, *distCoeffs_cv);
       vector<Point2> cornersForGtsam;
       cornersForGtsam.reserve(4);
-      for (const auto &c : cvCornersOut) {
-        cornersForGtsam.emplace_back(c.x, c.y);
-        fmt::println("Undistorted corner: {}, {}", c.x, c.y);
+      for (const auto &c : t.corners) {
+        cornersForGtsam.emplace_back(c.first, c.second);
+        fmt::println("Undistorted corner: {}, {}", c.first, c.second);
       }
 
       ret.emplace_back(tarr.time, t.id, cornersForGtsam, *cameraK,
