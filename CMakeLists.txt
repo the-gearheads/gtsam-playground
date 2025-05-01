@@ -161,4 +161,6 @@ target_link_libraries(
 target_include_directories(localizer_test PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
 include(GoogleTest)
-gtest_discover_tests(localizer_test)
+if(NOT CMAKE_CROSSCOMPILING)
+  gtest_discover_tests(localizer_test)
+endif()
