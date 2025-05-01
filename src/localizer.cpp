@@ -270,7 +270,7 @@ const std::vector<frc::Pose3d> Localizer::GetPoseHistory() const {
                                         units::meter_t{est.z()}},
                      frc::Rotation3d{est.rotation().matrix()});
   }
-  fmt::println("i={}", i);
+  // fmt::println("i={}", i);
 
   return ret;
 }

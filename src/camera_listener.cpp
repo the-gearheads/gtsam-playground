@@ -86,13 +86,18 @@ bool CameraListener::ReadyToOptimize() {
                         K_[2], K_[3]};
     if (!cameraK || !cameraK->equals(newK, 1e-6)) {
       cameraK = newK;
-      double cameraK_arr[3][3] = {{K_[0], 0, K_[2]}, {0, K_[2], K_[3]}, {0, 0, 1}};
       if (cameraK_cv.has_value()) cameraK_cv->release();
       if (distCoeffs_cv.has_value()) distCoeffs_cv->release();
 
-      cameraK_cv = cv::Mat(3, 3, CV_64F, cameraK_arr);
+      cameraK_cv = cv::Mat::zeros(3, 3, CV_64F);
+      cameraK_cv->at<double>(0, 0) = K_[0]; // fx
+      cameraK_cv->at<double>(1, 1) = K_[1]; // fy
+      cameraK_cv->at<double>(0, 2) = K_[2]; // cx
+      cameraK_cv->at<double>(1, 2) = K_[3]; // cy
+      cameraK_cv->at<double>(2, 2) = 1.0;
 
-      distCoeffs_cv = cv::Mat(8, 1, CV_64F, cv::Scalar(0));
+
+      distCoeffs_cv = cv::Mat::zeros(8, 1, CV_64F);
       for(int i = 0; i < 8; i++) {
         distCoeffs_cv->at<double>(i, 0) = K_[4 + i];
       }
@@ -141,14 +146,20 @@ std::vector<CameraVisionObservation> CameraListener::Update() {
       vector<cv::Point2f> cvCornersOut;
       cvCornersIn.reserve(4);
       for (const auto &c : t.corners) {
+        fmt::println("Corner: {}, {}", c.first, c.second);
         cvCornersIn.emplace_back(c.first, c.second);
       }
       // undistort the corners
+      if(!cameraK_cv.has_value() || !distCoeffs_cv.has_value()) {
+        fmt::println("Camera {}: no camera calibration set?", config.subtableName);
+        continue;
+      }
       cv::undistortPoints(cvCornersIn, cvCornersOut, *cameraK_cv, *distCoeffs_cv);
       vector<Point2> cornersForGtsam;
       cornersForGtsam.reserve(4);
       for (const auto &c : cvCornersOut) {
         cornersForGtsam.emplace_back(c.x, c.y);
+        fmt::println("Undistorted corner: {}, {}", c.x, c.y);
       }
 
       ret.emplace_back(tarr.time, t.id, cornersForGtsam, *cameraK,
