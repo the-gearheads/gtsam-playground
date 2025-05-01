@@ -1,6 +1,5 @@
 {
     "files.associations": {
-        "*.jinja": "jinja",
         "*.tcc": "cpp",
         "deque": "cpp",
         "list": "cpp",

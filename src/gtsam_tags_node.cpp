@@ -77,15 +77,11 @@ public:
     bool readyToOptimize = true;
 
     if (const auto prior = configListener.NewPosePrior()) {
-      if (!gotInitialGuess) {
-        fmt::println("Resetting to new pose prior");
-        localizer->Reset(prior->value.pose, prior->value.noise, prior->time);
-        gotInitialGuess = true;
-      }
+      localizer->Reset(prior->value.pose, prior->value.noise, prior->time);
+      gotInitialGuess = true;
     }
 
     if (const auto layout = configListener.NewTagLayout()) {
-      fmt::println("Updating layout!");
       TagModel::SetLayout(*layout);
 
       // Reset initial guess tracking since we got a new layout and our factors
@@ -132,7 +128,7 @@ public:
 
     if (!readyToOptimize) {
       fmt::println("Not yet ready (see above) -- busywaiting");
-      std::this_thread::sleep_for(100ms);
+      std::this_thread::sleep_for(1000ms);
       return;
     }
 

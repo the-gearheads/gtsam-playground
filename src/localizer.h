@@ -59,10 +59,13 @@ public:
 
   void Optimize();
 
+  // inline void ExportGraph(std::ostream& os) {
+  //   smootherISAM2.getFactors().saveGraph(os);
+  // }
   inline void Print(const std::string_view prefix = "") {
     fmt::println("{}", prefix);
     smootherISAM2.print();
-    smootherISAM2.getFactorsUnsafe().print();
+    smootherISAM2.getISAM2().getFactorsUnsafe().print();
     smootherISAM2.calculateEstimate().print("Current estimate:");
   }
 
@@ -100,10 +103,9 @@ protected:
   // typedef std::map<Key, gtsam::Pose3> KeyPoseDeltaMap;
   // KeyPoseDeltaMap twistsFromPreviousKey{};
 
-  // ISAM + map of keys <-> times
-  gtsam::ISAM2 smootherISAM2 {};
-  
-  std::map<gtsam::Key, double> keyToTimestamp {};
+  // ISAM-backed fixed-lag smoother. Will marginalize out states older then a
+  // given lag.
+  gtsam::IncrementalFixedLagSmoother smootherISAM2;
 
   // Current "tip" world->body estimate
   gtsam::Pose3 wTb_latest;
