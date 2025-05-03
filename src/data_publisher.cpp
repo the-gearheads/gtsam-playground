@@ -54,15 +54,30 @@ DataPublisher::DataPublisher(std::string rootTable,
                     .Publish({
                         .sendAll = true,
                         .keepDuplicates = true,
+                    })),
+      readyToOptimizePub(nt::NetworkTableInstance::GetDefault()
+                    .GetBooleanTopic(rootTable + "/output/ready_to_optimize")
+                    .Publish({
+                      .sendAll = true,
+                      .keepDuplicates = true,
+                    })),
+      hadIssuePub(nt::NetworkTableInstance::GetDefault()
+                    .GetBooleanTopic(rootTable + "/output/had_issue")
+                    .Publish({
+                      .sendAll = true,
+                      .keepDuplicates = true,
                     })) {}
 
-void DataPublisher::Update() {
+void DataPublisher::Update(bool readyToOptimize, bool hadIssue) {
   if (!localizer) {
     throw std::runtime_error("Localizer was null");
   }
 
   auto time = localizer->GetLastOdomTime();
 
+  readyToOptimizePub.Set(readyToOptimize);
+  hadIssuePub.Set(hadIssue);
+  
   {
     auto est = localizer->GetLatestWorldToBody();
     optimizedPosePub.Set(GtsamToFrcPose3d(est), time);

@@ -75,6 +75,7 @@ public:
 
   void Update() {
     bool readyToOptimize = true;
+    bool hadIssue = false;
 
     if (const auto prior = configListener.NewPosePrior()) {
       if(!gotInitialGuess) {
@@ -113,7 +114,7 @@ public:
             tooNewCameraObservations.push_back(it);
             continue;
           }
-          localizer->AddTagObservation(it);
+          hadIssue |= localizer->AddTagObservation(it);
         }
       }
     }
@@ -122,7 +123,7 @@ public:
     for (auto it = tooNewCameraObservations.begin(); it != tooNewCameraObservations.end();) {
       if (it->timeUs <= lastOdomTimestamp) {
         fmt::println("Processing a camera observation from the backlog");
-        localizer->AddTagObservation(*it);
+        hadIssue |= localizer->AddTagObservation(*it);
         it = tooNewCameraObservations.erase(it); // erase() returns the next valid iterator
       } else {
         ++it; // Skip if still too new
@@ -140,7 +141,7 @@ public:
 
     try {
       localizer->Optimize();
-      dataPublisher.Update();
+      dataPublisher.Update(readyToOptimize, hadIssue);
       nt::NetworkTableInstance::GetDefault().Flush();
     } catch (const std::exception &e) {
       fmt::println("Exception optimizing: {}", e.what());
@@ -170,13 +171,23 @@ int main(int argc, char **argv) {
   inst.StopServer();
   inst.SetServer(config.ntServerURI.c_str());
   inst.StartClient4("gtsam-meme");
-
+  auto loopTimeMeasuredPub = inst.GetDoubleTopic(config.rootTableName + "/output/loop_time_ms").Publish({ .sendAll = true });
+  auto loopTime = std::chrono::milliseconds(10);
   LocalizerRunner runner(config);
-
+  
   while (true) {
+    auto start = std::chrono::steady_clock::now();
     runner.Update();
 
-    std::this_thread::sleep_for(10ms);
+    auto end = std::chrono::steady_clock::now();
+    const std::chrono::duration<double, std::milli> elapsed = end - start;
+    loopTimeMeasuredPub.Set(elapsed.count());
+    auto sleepTime = loopTime - elapsed;
+    if (sleepTime < 0ms) {
+      fmt::println("Loop took too long! {}ms", elapsed.count());
+      sleepTime = 0ms;
+    }
+    std::this_thread::sleep_for(sleepTime);
   }
 
   return 0;

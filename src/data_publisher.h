@@ -33,6 +33,7 @@
 #include <networktables/DoubleArrayTopic.h>
 #include <networktables/StructArrayTopic.h>
 #include <networktables/StructTopic.h>
+#include <networktables/BooleanTopic.h>
 
 #include "TagDetectionStruct.h"
 #include "config.h"
@@ -49,7 +50,7 @@ public:
   /**
    * Publish new data to NT
    */
-  void Update();
+  void Update(bool readyToOptimize, bool hadIssue);
 
 private:
   std::shared_ptr<Localizer> localizer;
@@ -60,4 +61,6 @@ private:
   nt::StructArrayPublisher<frc::Pose3d> trajectoryHistoryPub;
   // standard deviations on rx ry rz tx ty tz
   nt::DoubleArrayPublisher stdDevPub;
+  nt::BooleanPublisher readyToOptimizePub;
+  nt::BooleanPublisher hadIssuePub;
 };

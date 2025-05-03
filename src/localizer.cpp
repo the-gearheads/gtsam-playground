@@ -141,8 +141,8 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
     if (isamEntryBefore->second < time && time < notAddedAfter->second) {
       return FindCloser(isamEntryBefore, notAddedAfter, time)->first;
     }
-    throw std::runtime_error(
-        "Timestamp is before not-added but not after isam history?");
+    fmt::println("Timestamp is before not-added but not after isam history?");
+    return 0;
   }
 
   KeyTimeMap::iterator notAddedBefore = std::prev(notAddedAfter);
@@ -161,20 +161,20 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
   }
 }
 
-void Localizer::AddTagObservation(CameraVisionObservation obs) {
+bool Localizer::AddTagObservation(CameraVisionObservation obs) {
   const auto &isamTimestamps = smootherISAM2.timestamps();
 
   if (isamTimestamps.empty()) {
     // in practice, are timestamps that hit this point reusable in the future?
     // std::cerr << "No isam history yet - skipping" << std::endl;
     fmt::println("No isam history yet - skipping");
-    return;
+    return false;
   }
 
   if (obs.timeUs < isamTimestamps.begin()->second) {
     std::cerr << "Timestamp is before even isam history - skipping"
               << std::endl;
-    return;
+    return false;
   }
 
   int tagID = obs.tagID;
@@ -188,7 +188,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
   if (!worldPcorners_opt) {
     // todo return bad thing
     fmt::println("Could not find tag {} in our map!", tagID);
-    return;
+    return false;
   }
   auto worldPcorners = worldPcorners_opt.value();
 
@@ -196,7 +196,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
 
   // Find where we should attach our new factors to
   Key stateAtTime = GetOrInsertKey(newKey, timeUs);
-  if (stateAtTime == 0) { return; }
+  if (stateAtTime == 0) { return false; }
 
   for (size_t i = 0; i < NUM_CORNERS; i++) {
     // corner in image space
@@ -209,6 +209,7 @@ void Localizer::AddTagObservation(CameraVisionObservation obs) {
 
     graph.addExpressionFactor(prediction, measurement, cameraNoise);
   }
+  return true;
 }
 
 void Localizer::Optimize() {

@@ -55,7 +55,7 @@ public:
 
   void AddOdometry(OdometryObservation odom);
 
-  void AddTagObservation(CameraVisionObservation tagDetection);
+  bool AddTagObservation(CameraVisionObservation tagDetection);
 
   void Optimize();
 
