@@ -19,12 +19,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # use ccache if we got it
-find_program(CCACHE_PRESENT "ccache")
-if(CCACHE_PRESENT)
-  message("Using Ccache")
-  set(CMAKE_C_COMPILER_LAUNCHER "ccache")
-  set(CMAKE_CXX_COMPILER_LAUNCHER "ccache")
-endif()
+# find_program(CCACHE_PRESENT "ccache")
+# if(CCACHE_PRESENT)
+#   message("Using Ccache")
+#   set(CMAKE_C_COMPILER_LAUNCHER "ccache")
+#   set(CMAKE_CXX_COMPILER_LAUNCHER "ccache")
+# endif()
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -63,8 +63,7 @@ set(GTSAM_USE_SYSTEM_EIGEN ON)
 FetchContent_Declare(
     gtsam
     GIT_REPOSITORY    https://github.com/borglab/gtsam
-    GIT_TAG           42cc0ac922460d506a7bbf3a37a4a0b1e103b79e
-    GIT_SHALLOW 1
+    GIT_TAG           a16dff37e6f3248bce67432754375d33f849388a
     EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(gtsam)
