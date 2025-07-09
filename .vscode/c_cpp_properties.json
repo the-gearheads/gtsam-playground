@@ -13,7 +13,7 @@
                 "${workspaceFolder}/build/compile_commands.json"
             ],
             "browse": {
-                "limitSymbolsToIncludedHeaders": true
+                "limitSymbolsToIncludedHeaders": false
             }
         }
     ],
