@@ -31,7 +31,9 @@
 
 using gtsam::Cal3_S2;
 using gtsam::Point3;
+using gtsam::Point3_;
 using gtsam::Pose3;
+using gtsam::Pose3_;
 using gtsam::Rot3;
 using std::map;
 using std::vector;
@@ -68,13 +70,27 @@ void SetLayout(const frc::AprilTagFieldLayout &layout) {
   worldTtags = TagLayoutToMap(layout);
 }
 
-std::optional<vector<Point3>> WorldToCorners(int id) {
+vector<Point3_> WorldToCornersFactor(Pose3_ worldTtag) {
+  vector<Point3_> out;
+  for (const auto &p : tagToCorners) {
+    out.push_back(transformFrom(worldTtag, p));
+  }
+  return out;
+}
+
+std::optional<Pose3> GetWorldToTag(int id) {
   auto maybePose = worldTtags.find(id);
   if (maybePose == worldTtags.end()) {
     return std::nullopt;
   }
   Pose3 worldTtag = maybePose->second;
+  return worldTtag;
+}
 
+std::optional<vector<Point3>> WorldToCorners(int id) {
+  auto worldTtagOpt = GetWorldToTag(id);
+  if(!worldTtagOpt) return std::nullopt;
+  auto worldTtag = worldTtagOpt.value(); 
   vector<Point3> out(4);
   std::transform(
       tagToCorners.begin(), tagToCorners.end(), out.begin(),

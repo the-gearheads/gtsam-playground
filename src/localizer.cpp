@@ -28,7 +28,8 @@
 #include "gtsam/nonlinear/Expression.h"
 
 using namespace gtsam;
-using symbol_shorthand::X;
+using symbol_shorthand::X; // state at time
+using symbol_shorthand::L; // tag position by id
 
 constexpr int NUM_CORNERS = 4;
 
@@ -198,13 +199,13 @@ bool Localizer::AddTagObservation(CameraVisionObservation obs) {
   const SharedNoiseModel cameraNoise = obs.cameraNoise;
   const uint64_t timeUs = obs.timeUs;
 
-  auto worldPcorners_opt = TagModel::WorldToCorners(tagID);
-  if (!worldPcorners_opt) {
-    // todo return bad thing
+  if(!TagModel::GetWorldToTag(tagID)) {
     fmt::println("Could not find tag {} in our map!", tagID);
     return false;
   }
-  auto worldPcorners = worldPcorners_opt.value();
+
+  auto worldPcorners = TagModel::WorldToCornersFactor(L(tagID));
+
 
   Key newKey = X(timeUs);
 

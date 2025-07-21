@@ -38,4 +38,6 @@
 namespace TagModel {
 void SetLayout(const frc::AprilTagFieldLayout &layout);
 std::optional<std::vector<gtsam::Point3>> WorldToCorners(int id);
+std::vector<gtsam::Point3_> WorldToCornersFactor(gtsam::Pose3_ worldTtag);
+std::optional<gtsam::Pose3> GetWorldToTag(int id);
 } // namespace TagModel
