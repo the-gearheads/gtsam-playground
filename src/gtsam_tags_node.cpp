@@ -114,7 +114,7 @@ public:
             tooNewCameraObservations.push_back(it);
             continue;
           }
-          hadIssue |= localizer->AddTagObservation(it);
+          hadIssue |= !localizer->AddTagObservation(it);
         }
       }
     }
@@ -123,7 +123,7 @@ public:
     for (auto it = tooNewCameraObservations.begin(); it != tooNewCameraObservations.end();) {
       if (it->timeUs <= lastOdomTimestamp) {
         fmt::println("Processing a camera observation from the backlog");
-        hadIssue |= localizer->AddTagObservation(*it);
+        hadIssue |= !localizer->AddTagObservation(*it);
         it = tooNewCameraObservations.erase(it); // erase() returns the next valid iterator
       } else {
         ++it; // Skip if still too new
