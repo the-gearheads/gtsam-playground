@@ -4,15 +4,15 @@
   "cameras": [
 
       {
-          "subtableName": "BACK_RIGHT",
+          "subtableName": "FRONT_LEFT_2025",
           "pixelNoise": 10
       },
       {
-        "subtableName": "BACK_LEFT_2025",
+        "subtableName": "BACK_LEFT_OFFSEASON",
         "pixelNoise": 10
     },
     {
-        "subtableName": "BACK_RIGHT",
+        "subtableName": "BACK_RIGHT_OFFSEASON",
         "pixelNoise": 10
     }
   ],
