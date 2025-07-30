@@ -281,11 +281,15 @@ const std::vector<frc::Pose3d> Localizer::GetPoseHistory() const {
 
   std::vector<frc::Pose3d> ret;
   ret.reserve(1000);
+  // int i = -1;
 
   for (const Values::ConstKeyValuePair &estPair : result) {
     if (estPair.key < start)
       continue;
 
+    // i++;
+    // if (i % 4 != 0) // we currently have 250 states, lets reduce it to ~62
+    //   continue;
     Pose3 est = estPair.value.cast<Pose3>();
 
     // auto rot = est.rotation().toQuaternion();
