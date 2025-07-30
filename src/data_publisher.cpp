@@ -68,15 +68,12 @@ DataPublisher::DataPublisher(std::string rootTable,
                       .keepDuplicates = true,
                     })) {}
 
-void DataPublisher::Update(bool readyToOptimize, bool hadIssue) {
+void DataPublisher::Update() {
   if (!localizer) {
     throw std::runtime_error("Localizer was null");
   }
 
   auto time = localizer->GetLastOdomTime();
-
-  readyToOptimizePub.Set(readyToOptimize);
-  hadIssuePub.Set(hadIssue);
   
   {
     auto est = localizer->GetLatestWorldToBody();
@@ -94,4 +91,9 @@ void DataPublisher::Update(bool readyToOptimize, bool hadIssue) {
     if (i % 3 == 2)
       trajectoryHistoryPub.Set(localizer->GetPoseHistory());
   }
+}
+
+void DataPublisher::UpdateStatus(bool readyToOptimize, bool hadIssue) {
+  readyToOptimizePub.Set(readyToOptimize);
+  hadIssuePub.Set(hadIssue);
 }

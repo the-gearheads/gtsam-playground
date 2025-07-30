@@ -50,7 +50,9 @@ public:
   /**
    * Publish new data to NT
    */
-  void Update(bool readyToOptimize, bool hadIssue);
+  void Update();
+
+  void UpdateStatus(bool readyToOptimize, bool hadIssue);
 
 private:
   std::shared_ptr<Localizer> localizer;

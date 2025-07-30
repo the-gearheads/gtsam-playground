@@ -72,19 +72,25 @@ public:
   }
 
   uint64_t lastOdomTimestamp = 0;
+  uint64_t lastPriorTime = 0;
 
   void Update() {
     bool readyToOptimize = true;
     bool hadIssue = false;
 
     if (const auto prior = configListener.NewPosePrior()) {
-      if(!gotInitialGuess) {
+      // if(!gotInitialGuess) {
       fmt::println("Got prior");
+      lastPriorTime = prior->time;
       localizer->Reset(prior->value.pose, prior->value.noise, prior->time);
+      localizer->Optimize();
+      lastOdomTimestamp = 0;
       gotInitialGuess = true;
-      }
+      tooNewCameraObservations.clear();
+      // }
     }
 
+    // don't need to wait on this because there's a hardcoded default in TagModel
     if (const auto layout = configListener.NewTagLayout()) {
       TagModel::SetLayout(*layout);
 
@@ -96,9 +102,15 @@ public:
     readyToOptimize &= gotInitialGuess;
 
     for (const auto &it : odomListener.Update()) {
+      if(it.timeUs < lastPriorTime) {
+        fmt::println("Odom measurement before prior/pose reset, ignoring");
+        continue;
+      }
       lastOdomTimestamp = std::max(lastOdomTimestamp, it.timeUs);
       localizer->AddOdometry(it);
     }
+
+    readyToOptimize &= lastOdomTimestamp != 0;
 
     // localizer->Print("=========================\nAfter adding odometry
     // factors");
@@ -107,8 +119,13 @@ public:
       bool ready = cam.ReadyToOptimize();
       readyToOptimize &= ready;
 
-      if (ready) {
+      if (readyToOptimize) {
         for (const auto &it : cam.Update()) {
+          if(it.timeUs < lastPriorTime) {
+            fmt::println("Cam measurement before prior/pose reset, ignoring");
+            continue;
+          }
+
           if (it.timeUs > lastOdomTimestamp) {
             fmt::println("Camera observation is newer than last odometry, skipping and saving for later");
             tooNewCameraObservations.push_back(it);
@@ -130,6 +147,8 @@ public:
       }
     }
 
+    dataPublisher.UpdateStatus(readyToOptimize, hadIssue);
+
     if (!readyToOptimize) {
       fmt::println("Not yet ready (see above) -- busywaiting");
       std::this_thread::sleep_for(1000ms);
@@ -141,7 +160,7 @@ public:
 
     try {
       localizer->Optimize();
-      dataPublisher.Update(readyToOptimize, hadIssue);
+      dataPublisher.Update();
       nt::NetworkTableInstance::GetDefault().Flush();
     } catch (const std::exception &e) {
       fmt::println("Exception optimizing: {}", e.what());

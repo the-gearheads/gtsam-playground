@@ -109,56 +109,70 @@ static KeyTimeConstIt FindCloser(KeyTimeConstIt left, KeyTimeConstIt right,
   }
 }
 
+// yeah this entire function was rewritten by gemini (in part) to fix the case where vision timestamp == odom timestamp. this seems to do the same thing reading it carefully (and appears to) and is more readable sooo
 Key Localizer::GetOrInsertKey(Key newKey, double time) {
   using KeyTimeMap = FixedLagSmoother::KeyTimestampMap;
+  const auto &isamTimestamps = smootherISAM2.timestamps();
 
-  const KeyTimeMap &isamTimestamps = smootherISAM2.timestamps();
+  // --- 1. Pre-checks for immediate failure ---
+  if (isamTimestamps.empty()) {
+    fmt::println("GetOrInsertKey: Failed for time {}. Reason: iSAM history is empty.", time);
+    return 0;
+  }
+
   const auto &isamEntryAfter = isamTimestamps.upper_bound(newKey);
   if (isamEntryAfter == isamTimestamps.begin()) {
-    fmt::println("Timestamp is before even isam history isamEntryAfter={}, begin={}", isamEntryAfter->first, isamTimestamps.begin()->first);
+    fmt::println("GetOrInsertKey: Failed for time {}. Reason: Time is before oldest iSAM state ({}).", time, isamTimestamps.begin()->second);
     return 0;
   }
-
-  // safe to do this, we checked we aren't at the start
   const auto &isamEntryBefore = std::prev(isamEntryAfter);
 
-  if (isamEntryAfter != isamTimestamps.end() &&
-      isamEntryBefore->second < time) {
-    // must be fully within isam
+  // --- 2. Search for the key in valid time regions ---
+
+  // Case A: Time is bracketed by two states within the main iSAM graph.
+  if (isamEntryAfter != isamTimestamps.end() && isamEntryBefore->second <= time) {
     return FindCloser(isamEntryBefore, isamEntryAfter, time)->first;
   }
 
-  KeyTimeMap::iterator notAddedAfter = newTimestamps.upper_bound(newKey);
-
-  if (notAddedAfter == newTimestamps.end()) {
-    fmt::println("Timestamp past ISAM history, but not in yet-to-be-added");
-    return 0;
-  }
-
-  if (notAddedAfter == newTimestamps.begin() &&
-      notAddedAfter != newTimestamps.end()) {
-    // check in between maybe?
-    if (isamEntryBefore->second < time && time < notAddedAfter->second) {
-      return FindCloser(isamEntryBefore, notAddedAfter, time)->first;
+  // Case B: Time is bracketed by two states in the `newTimestamps` map.
+  if (!newTimestamps.empty()) {
+    auto notAddedAfter = newTimestamps.upper_bound(newKey);
+    if (notAddedAfter != newTimestamps.begin()) {
+      auto notAddedBefore = std::prev(notAddedAfter);
+      if (notAddedAfter != newTimestamps.end() && notAddedBefore->second <= time) {
+        return FindCloser(notAddedBefore, notAddedAfter, time)->first;
+      }
     }
-    fmt::println("Timestamp is before not-added but not after isam history?");
+  }
+
+  // Case C: Time falls in the "gap" between the last iSAM state and the first new state.
+  if (!newTimestamps.empty()) {
+    if (time > isamEntryBefore->second && time < newTimestamps.begin()->second) {
+      return FindCloser(isamEntryBefore, newTimestamps.begin(), time)->first;
+    }
+  }
+
+  // --- 3. If no key was found, diagnose and report the failure ---
+  double latestKnownTime = newTimestamps.empty() ? isamEntryBefore->second : newTimestamps.rbegin()->second;
+  if (time > latestKnownTime) {
+    fmt::println("GetOrInsertKey: Failed for time {}. Reason: Time is after latest known state ({}).", time, latestKnownTime);
     return 0;
   }
 
-  KeyTimeMap::iterator notAddedBefore = std::prev(notAddedAfter);
-
-  if (isamEntryAfter != isamTimestamps.end() &&
-      isamEntryBefore->second < time) {
-    // must be fully within isam
-    return FindCloser(isamEntryBefore, isamEntryAfter, time)->first;
-  } else if (notAddedAfter != newTimestamps.end() &&
-             notAddedBefore->second < time) {
-    // must be fully within not added
-    return FindCloser(notAddedBefore, notAddedAfter, time)->first;
+  // If we reach here, it's a logic error. wtf is going on if this happens
+  fmt::println("GetOrInsertKey: Unhandled case for time {}. sad", time);
+  fmt::println("  - iSAM state before: {}", isamEntryBefore->second);
+  if (isamEntryAfter != isamTimestamps.end()) {
+    fmt::println("  - iSAM state after:  {}", isamEntryAfter->second);
   } else {
-    // already checked in between
-    throw std::runtime_error("wtf");
+    fmt::println("  - iSAM state after:  (end of history)");
   }
+  if (!newTimestamps.empty()) {
+    fmt::println("  - New states range:  [{}, {}]", newTimestamps.begin()->second, newTimestamps.rbegin()->second);
+  } else {
+    fmt::println("  - New states:        (empty)");
+  }
+  throw std::logic_error("wtf");
 }
 
 bool Localizer::AddTagObservation(CameraVisionObservation obs) {
@@ -196,7 +210,10 @@ bool Localizer::AddTagObservation(CameraVisionObservation obs) {
 
   // Find where we should attach our new factors to
   Key stateAtTime = GetOrInsertKey(newKey, timeUs);
-  if (stateAtTime == 0) { return false; }
+  if (stateAtTime == 0) {
+    fmt::println("Key not found - skipping");
+    return false;
+  }
 
   for (size_t i = 0; i < NUM_CORNERS; i++) {
     // corner in image space
