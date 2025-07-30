@@ -147,7 +147,7 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
 
   // Case C: Time falls in the "gap" between the last iSAM state and the first new state.
   if (!newTimestamps.empty()) {
-    if (time > isamEntryBefore->second && time < newTimestamps.begin()->second) {
+    if (time >= isamEntryBefore->second && time < newTimestamps.begin()->second) {
       return FindCloser(isamEntryBefore, newTimestamps.begin(), time)->first;
     }
   }
