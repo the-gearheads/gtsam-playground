@@ -68,7 +68,7 @@ void Localizer::Reset(Pose3 wTr, SharedNoiseModel noise, uint64_t timeUs) {
   factorsToRemove.clear();
   // twistsFromPreviousKey.clear();
 
-  graph.addPrior(currStateIdx, wTr, noise);
+  // graph.addPrior(currStateIdx, wTr, noise);
   currentEstimate.insert(currStateIdx, wTr);
   newTimestamps[currStateIdx] = timeUs;
 

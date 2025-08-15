@@ -60,6 +60,8 @@ private:
   std::deque<CameraVisionObservation> tooNewCameraObservations;
 
   bool gotInitialGuess = false;
+  bool odometryAdded = false;
+  bool gotVisionMeasurement = false;
 
 public:
   explicit LocalizerRunner(LocalizerConfig config)
@@ -86,6 +88,8 @@ public:
       localizer->Optimize();
       lastOdomTimestamp = 0;
       gotInitialGuess = true;
+      gotVisionMeasurement = false;
+      odometryAdded = false;
       tooNewCameraObservations.clear();
       // }
     }
@@ -97,6 +101,8 @@ public:
       // Reset initial guess tracking since we got a new layout and our factors
       // are technically now wrong
       gotInitialGuess = false;
+      gotVisionMeasurement = false;
+      odometryAdded = false;
     }
 
     readyToOptimize &= gotInitialGuess;
@@ -108,6 +114,7 @@ public:
       }
       lastOdomTimestamp = std::max(lastOdomTimestamp, it.timeUs);
       localizer->AddOdometry(it);
+      odometryAdded = true;
     }
 
     readyToOptimize &= lastOdomTimestamp != 0;
@@ -119,7 +126,7 @@ public:
       bool ready = cam.ReadyToOptimize();
       readyToOptimize &= ready;
 
-      if (readyToOptimize) {
+      if (odometryAdded && ready) {
         for (const auto &it : cam.Update()) {
           if(it.timeUs < lastPriorTime) {
             fmt::println("Cam measurement before prior/pose reset, ignoring");
@@ -131,26 +138,34 @@ public:
             tooNewCameraObservations.push_back(it);
             continue;
           }
-          hadIssue |= !localizer->AddTagObservation(it);
+          bool success = localizer->AddTagObservation(it);
+          hadIssue |= !success;
+          gotVisionMeasurement |= success;
         }
       }
     }
+
 
     // check to see if we can process any in the backlog
     for (auto it = tooNewCameraObservations.begin(); it != tooNewCameraObservations.end();) {
       if (it->timeUs <= lastOdomTimestamp) {
         fmt::println("Processing a camera observation from the backlog");
-        hadIssue |= !localizer->AddTagObservation(*it);
+        bool success = localizer->AddTagObservation(*it);
+        hadIssue |= !success;
+        gotVisionMeasurement |= success;
         it = tooNewCameraObservations.erase(it); // erase() returns the next valid iterator
       } else {
         ++it; // Skip if still too new
       }
     }
 
+    readyToOptimize &= gotVisionMeasurement;
+
     dataPublisher.UpdateStatus(readyToOptimize, hadIssue);
 
-    if (!readyToOptimize) {
-      fmt::println("Not yet ready (see above) -- busywaiting");
+
+    if (!readyToOptimize || !gotVisionMeasurement) {
+      fmt::println("Not yet ready (see above) -- busywaiting, RTO: {}, GVM: {}, ODA: {}", readyToOptimize, gotVisionMeasurement, odometryAdded);
       std::this_thread::sleep_for(1000ms);
       return;
     }
