@@ -65,7 +65,7 @@ public:
   inline void Print(const std::string_view prefix = "") {
     fmt::println("{}", prefix);
     smootherISAM2.print();
-    smootherISAM2.getISAM2().getFactorsUnsafe().print();
+    smootherISAM2.getFactorsUnsafe().print();
     smootherISAM2.calculateEstimate().print("Current estimate:");
   }
 
@@ -94,8 +94,8 @@ protected:
   gtsam::ExpressionFactorGraph graph{};
   // New inital guesses to add to our smoother at the next call to Optimize()
   gtsam::Values currentEstimate{};
-  // New state timestamps to add to our smoother at the next call to Optimize()
-  gtsam::FixedLagSmoother::KeyTimestampMap newTimestamps{};
+  
+  gtsam::FixedLagSmoother::KeyTimestampMap keyTimestampMap{};
   // Factors to delete
   gtsam::FactorIndices factorsToRemove{};
 
@@ -103,9 +103,8 @@ protected:
   // typedef std::map<Key, gtsam::Pose3> KeyPoseDeltaMap;
   // KeyPoseDeltaMap twistsFromPreviousKey{};
 
-  // ISAM-backed fixed-lag smoother. Will marginalize out states older then a
-  // given lag.
-  gtsam::IncrementalFixedLagSmoother smootherISAM2;
+  // ISAM-backed fixed-lag smoother.
+  gtsam::ISAM2 smootherISAM2;
 
   // Current "tip" world->body estimate
   gtsam::Pose3 wTb_latest;

@@ -46,7 +46,7 @@ Localizer::Localizer() {
   // precision issues
   double lag = 5 * 1e6;
   // double lag = 2;
-  smootherISAM2 = IncrementalFixedLagSmoother(lag, parameters);
+  smootherISAM2 = ISAM2(parameters);
 
   // // And make sure to call optimize first to get values
   // TODO i killed maybe needed, idk
@@ -60,24 +60,23 @@ void Localizer::Reset(Pose3 wTr, SharedNoiseModel odomPriorNoise, SharedNoiseMod
 
   currStateIdx = X(timeUs);
 
-  smootherISAM2 = IncrementalFixedLagSmoother(smootherISAM2.smootherLag(),
-                                              smootherISAM2.params());
+  smootherISAM2 = ISAM2(smootherISAM2.params());
 
   graph.resize(0);
   currentEstimate.clear();
-  newTimestamps.clear();
+  keyTimestampMap.clear();
   factorsToRemove.clear();
   // twistsFromPreviousKey.clear();
 
   // graph.addPrior(currStateIdx, wTr, noise);
   currentEstimate.insert(currStateIdx, wTr);
-  newTimestamps[currStateIdx] = timeUs;
+  keyTimestampMap[currStateIdx] = timeUs;
 
   // seed all tags
   for (const auto &[id, pose] : TagModel::GetWorldToAllTags()) {
     Key tagKey = L(id);
     graph.addPrior(tagKey, pose, tagPriorNoise);
-    // currentEstimate.insert(tagKey, pose);
+    currentEstimate.insert(tagKey, pose);
   }
 
   wTb_latest = wTr;
@@ -98,7 +97,7 @@ void Localizer::AddOdometry(OdometryObservation odom) {
   wTb_latest = wTb_latest.transformPoseFrom(poseDelta);
   currentEstimate.insert(newStateIdx, wTb_latest);
 
-  newTimestamps[newStateIdx] = timeUs;
+  keyTimestampMap[newStateIdx] = timeUs;
   // twistsFromPreviousKey[newStateIdx] = poseDelta;
   latestOdomTime = timeUs;
 
@@ -120,7 +119,7 @@ static KeyTimeConstIt FindCloser(KeyTimeConstIt left, KeyTimeConstIt right,
 // yeah this entire function was rewritten by gemini (in part) to fix the case where vision timestamp == odom timestamp. this seems to do the same thing reading it carefully (and appears to) and is more readable sooo
 Key Localizer::GetOrInsertKey(Key newKey, double time) {
   using KeyTimeMap = FixedLagSmoother::KeyTimestampMap;
-  const auto &isamTimestamps = smootherISAM2.timestamps();
+  const auto &isamTimestamps = keyTimestampMap;
 
   // --- 1. Pre-checks for immediate failure ---
   if (isamTimestamps.empty()) {
@@ -142,26 +141,26 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
     return FindCloser(isamEntryBefore, isamEntryAfter, time)->first;
   }
 
-  // Case B: Time is bracketed by two states in the `newTimestamps` map.
-  if (!newTimestamps.empty()) {
-    auto notAddedAfter = newTimestamps.upper_bound(newKey);
-    if (notAddedAfter != newTimestamps.begin()) {
-      auto notAddedBefore = std::prev(notAddedAfter);
-      if (notAddedAfter != newTimestamps.end() && notAddedBefore->second <= time) {
-        return FindCloser(notAddedBefore, notAddedAfter, time)->first;
-      }
-    }
-  }
+  // // Case B: Time is bracketed by two states in the `newTimestamps` map.
+  // if (!newTimestamps.empty()) {
+  //   auto notAddedAfter = newTimestamps.upper_bound(newKey);
+  //   if (notAddedAfter != newTimestamps.begin()) {
+  //     auto notAddedBefore = std::prev(notAddedAfter);
+  //     if (notAddedAfter != newTimestamps.end() && notAddedBefore->second <= time) {
+  //       return FindCloser(notAddedBefore, notAddedAfter, time)->first;
+  //     }
+  //   }
+  // }
 
-  // Case C: Time falls in the "gap" between the last iSAM state and the first new state.
-  if (!newTimestamps.empty()) {
-    if (time >= isamEntryBefore->second && time < newTimestamps.begin()->second) {
-      return FindCloser(isamEntryBefore, newTimestamps.begin(), time)->first;
-    }
-  }
+  // // Case C: Time falls in the "gap" between the last iSAM state and the first new state.
+  // if (!newTimestamps.empty()) {
+  //   if (time >= isamEntryBefore->second && time < newTimestamps.begin()->second) {
+  //     return FindCloser(isamEntryBefore, newTimestamps.begin(), time)->first;
+  //   }
+  // }
 
   // --- 3. If no key was found, diagnose and report the failure ---
-  double latestKnownTime = newTimestamps.empty() ? isamEntryBefore->second : newTimestamps.rbegin()->second;
+  double latestKnownTime = isamEntryBefore->second;
   if (time > latestKnownTime) {
     fmt::println("GetOrInsertKey: Failed for time {}. Reason: Time is after latest known state ({}).", time, latestKnownTime);
     return 0;
@@ -175,16 +174,12 @@ Key Localizer::GetOrInsertKey(Key newKey, double time) {
   } else {
     fmt::println("  - iSAM state after:  (end of history)");
   }
-  if (!newTimestamps.empty()) {
-    fmt::println("  - New states range:  [{}, {}]", newTimestamps.begin()->second, newTimestamps.rbegin()->second);
-  } else {
-    fmt::println("  - New states:        (empty)");
-  }
+
   throw std::logic_error("wtf");
 }
 
 bool Localizer::AddTagObservation(CameraVisionObservation obs) {
-  const auto &isamTimestamps = smootherISAM2.timestamps();
+  const auto &isamTimestamps = keyTimestampMap;
 
   if (isamTimestamps.empty()) {
     // in practice, are timestamps that hit this point reusable in the future?
@@ -258,24 +253,12 @@ void Localizer::Optimize() {
   //   keyToTimestamp.erase(keyToTimestamp.begin(), min_time_it);
   // }
 
-  // try and stop tag ids from being marginalized out
-  for (auto &[id, pose] : TagModel::GetWorldToAllTags()) {
-    Key tagKey = L(id);
-    // fmt::println("{}", newTimestamps);
-    // fmt::println("{}", currentEstimate);
-    // currentEstimate.print();
-    newTimestamps.emplace(tagKey, currStateIdx-1);
-    // currentEstimate.insert(tagKey, pose);
-  }
 
-
-
-  smootherISAM2.update(graph, currentEstimate, newTimestamps, factorsToRemove);
+  smootherISAM2.update(graph, currentEstimate, factorsToRemove);
 
   // reset the graph; isam wants to be fed factors to be -added-
   graph.resize(0);
   currentEstimate.clear();
-  newTimestamps.clear();
   factorsToRemove.clear();
 
   // And grab the estimate of only the latest pose (maximize laziness)
