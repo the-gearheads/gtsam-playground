@@ -53,7 +53,7 @@ Localizer::Localizer() {
   // Optimize();
 }
 
-void Localizer::Reset(Pose3 wTr, SharedNoiseModel noise, uint64_t timeUs) {
+void Localizer::Reset(Pose3 wTr, SharedNoiseModel odomPriorNoise, SharedNoiseModel tagPriorNoise, uint64_t timeUs) {
   // Anchor graph using initial pose. I subtract one to make sure that we dont
   // add this time to the estimate map twice
   timeUs -= 1;
@@ -72,6 +72,13 @@ void Localizer::Reset(Pose3 wTr, SharedNoiseModel noise, uint64_t timeUs) {
   // graph.addPrior(currStateIdx, wTr, noise);
   currentEstimate.insert(currStateIdx, wTr);
   newTimestamps[currStateIdx] = timeUs;
+
+  // seed all tags
+  for (const auto &[id, pose] : TagModel::GetWorldToAllTags()) {
+    Key tagKey = L(id);
+    graph.addPrior(tagKey, pose, tagPriorNoise);
+    // currentEstimate.insert(tagKey, pose);
+  }
 
   wTb_latest = wTr;
 }
@@ -251,6 +258,18 @@ void Localizer::Optimize() {
   //   keyToTimestamp.erase(keyToTimestamp.begin(), min_time_it);
   // }
 
+  // try and stop tag ids from being marginalized out
+  for (auto &[id, pose] : TagModel::GetWorldToAllTags()) {
+    Key tagKey = L(id);
+    // fmt::println("{}", newTimestamps);
+    // fmt::println("{}", currentEstimate);
+    // currentEstimate.print();
+    newTimestamps.emplace(tagKey, currStateIdx-1);
+    // currentEstimate.insert(tagKey, pose);
+  }
+
+
+
   smootherISAM2.update(graph, currentEstimate, newTimestamps, factorsToRemove);
 
   // reset the graph; isam wants to be fed factors to be -added-
@@ -285,7 +304,7 @@ const std::vector<frc::Pose3d> Localizer::GetPoseHistory() const {
   // int i = -1;
 
   for (const Values::ConstKeyValuePair &estPair : result) {
-    if (estPair.key < start)
+    if (estPair.key < start || Symbol(estPair.key).chr() != 'x')
       continue;
 
     // i++;

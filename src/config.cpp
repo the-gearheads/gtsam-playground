@@ -52,6 +52,8 @@ LocalizerConfig ParseConfig(std::string_view path) {
       .ntServerURI = json.at("ntServerURI").get<std::string>(),
       .rotNoise = json.at("rotNoise").get<std::array<double, 3>>(),
       .transNoise = json.at("transNoise").get<std::array<double, 3>>(),
+      .tagRotNoise = json.at("tagRotNoise").get<std::array<double, 3>>(),
+      .tagTransNoise = json.at("tagTransNoise").get<std::array<double, 3>>(),
       .cameras = json.at("cameras").get<std::vector<CameraConfig>>()};
 }
 

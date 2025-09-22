@@ -48,6 +48,9 @@ struct LocalizerConfig {
   std::array<double, 3> rotNoise;
   std::array<double, 3> transNoise;
 
+  std::array<double, 3> tagRotNoise;
+  std::array<double, 3> tagTransNoise;
+
   // cameras
   std::vector<CameraConfig> cameras;
 

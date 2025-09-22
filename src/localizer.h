@@ -51,7 +51,7 @@ public:
   /**
    * Add a prior factor on the world->robot pose
    */
-  void Reset(gtsam::Pose3 wTr, gtsam::SharedNoiseModel noise, uint64_t timeUs);
+  void Reset(gtsam::Pose3 wTr, gtsam::SharedNoiseModel odomPriorNoise, gtsam::SharedNoiseModel tagPriorNoise, uint64_t timeUs);
 
   void AddOdometry(OdometryObservation odom);
 

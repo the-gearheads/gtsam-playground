@@ -70,6 +70,10 @@ void SetLayout(const frc::AprilTagFieldLayout &layout) {
   worldTtags = TagLayoutToMap(layout);
 }
 
+map<int, Pose3>& GetWorldToAllTags() {
+  return worldTtags;
+}
+
 vector<Point3_> WorldToCornersFactor(Pose3_ worldTtag) {
   vector<Point3_> out;
   for (const auto &p : tagToCorners) {

@@ -56,6 +56,7 @@ private:
   OdomListener odomListener;
   DataPublisher dataPublisher;
   ConfigListener configListener;
+  LocalizerConfig config;
   std::vector<CameraListener> cameraListeners;
   std::deque<CameraVisionObservation> tooNewCameraObservations;
 
@@ -66,7 +67,7 @@ private:
 public:
   explicit LocalizerRunner(LocalizerConfig config)
       : localizer(std::make_shared<Localizer>()), odomListener{config},
-        dataPublisher(config.rootTableName, localizer), configListener(config) {
+        dataPublisher(config.rootTableName, localizer), configListener(config), config(config) {
     cameraListeners.reserve(config.cameras.size());
     for (const CameraConfig &camCfg : config.cameras) {
       cameraListeners.emplace_back(config.rootTableName, camCfg);
@@ -84,7 +85,10 @@ public:
       // if(!gotInitialGuess) {
       fmt::println("Got prior");
       lastPriorTime = prior->time;
-      localizer->Reset(prior->value.pose, prior->value.noise, prior->time);
+      // i really don't like this here
+      auto tagPriorNoise = noiseModel::Diagonal::Sigmas(gtsam::Vector6{config.tagRotNoise[0], config.tagRotNoise[1], config.tagRotNoise[2],
+                                     config.tagTransNoise[0], config.tagTransNoise[1], config.tagTransNoise[2]});
+      localizer->Reset(prior->value.pose, prior->value.noise, tagPriorNoise, prior->time);
       localizer->Optimize();
       lastOdomTimestamp = 0;
       gotInitialGuess = true;

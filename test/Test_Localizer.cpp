@@ -61,7 +61,7 @@ TEST(LocalizerTest, LatencyCompensate) {
 
   auto localizer = Localizer();
 
-  localizer.Reset(Pose3(), posePriorNoise, 5 * 1000);
+  localizer.Reset(Pose3(), posePriorNoise, posePriorNoise, 5 * 1000);
   localizer.AddOdometry(OdometryObservation{
       100 * 1000, Pose3{Rot3{}, Point3{1, 0, 0}}, odometryNoise});
   localizer.AddOdometry(OdometryObservation{
