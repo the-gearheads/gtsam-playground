@@ -66,7 +66,7 @@ CameraListener::CameraListener(std::string rootTable, CameraConfig config)
                              .sendAll = false,
                              .keepDuplicates = false,
                          })),
-      measurementNoise(noiseModel::Isotropic::Sigma(2, config.pixelNoise)) {}
+      measurementNoise(noiseModel::Robust::Create(noiseModel::mEstimator::Huber::Create(1.345), noiseModel::Isotropic::Sigma(2, config.pixelNoise))) {}
 
 bool CameraListener::ReadyToOptimize() {
   // grab the latest camera cal

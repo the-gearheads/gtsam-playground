@@ -76,5 +76,5 @@ private:
   // Camera calibration; assume all pixel inputs are already undistorted
   nt::DoubleArraySubscriber pinholeIntrinsicsSub;
 
-  ::gtsam::noiseModel::Isotropic::shared_ptr measurementNoise;
+  ::gtsam::noiseModel::Robust::shared_ptr measurementNoise;
 };
